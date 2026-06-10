@@ -1,0 +1,1910 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Search, Plus, MessageCircle, User, Heart, Bell, Share2, 
+  MapPin, CheckCircle, Flame, GraduationCap, ArrowUpDown, 
+  Camera, Sparkles, Send, Star, AlertCircle, ShoppingBag, 
+  ChevronRight, ArrowLeft, Filter, LogOut, MessageSquare, 
+  Check, CheckCheck, Landmark, Trash2, Sun, Moon, ShieldAlert, Key, Mail, Settings
+} from 'lucide-react';
+
+const DEFAULT_PRODUCTS = [
+  {
+    id: 1,
+    title: "AirPods Pro 二代 (極新)",
+    description: "功能完全正常，極少使用。外觀九成新以上，皆有套保護殼。隨盒附上全新未使用過的充電線。歡迎中央大學面交驗機！",
+    price: 3800,
+    category: "3C電子",
+    status: "販售中", 
+    meetup_location: "宵夜街", 
+    bargainable: true,
+    condition: "九成新",
+    seller_id: 101,
+    seller_name: "李大華",
+    seller_verified: true,
+    seller_rating: 4.8,
+    is_urgent: true,
+    is_grad_clearance: false,
+    image: "https://images.unsplash.com/photo-1588449668365-d15e397f6787?w=500&auto=format&fit=crop&q=60"
+  },
+  {
+    id: 2,
+    title: "微積分甲 上下冊 (線性代數必備)",
+    description: "資工系、電機系必修微積分課本，裡面有些許重要劃線，不影響閱讀。兩本合售，不拆賣。祝學弟妹順利歐趴！",
+    price: 450,
+    category: "教科書",
+    status: "販售中",
+    meetup_location: "管院",
+    bargainable: false,
+    condition: "八成新",
+    seller_id: 101,
+    seller_name: "李大華",
+    seller_verified: true,
+    seller_rating: 4.8,
+    is_urgent: false,
+    is_grad_clearance: true,
+    image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&auto=format&fit=crop&q=60"
+  },
+  {
+    id: 3,
+    title: "捷安特 6段變速二手腳踏車",
+    description: "中大校園代步神車！煞車剛換新，變速順暢。輪胎胎紋還很深，附密碼鎖以及前車燈。畢業清空宿舍出清，便宜賣給需要的人。",
+    price: 1200,
+    category: "生活出行",
+    status: "已預訂",
+    meetup_location: "女十四宿舍",
+    bargainable: true,
+    condition: "七成新",
+    seller_id: 102,
+    seller_name: "王小明",
+    seller_verified: true,
+    seller_rating: 4.5,
+    is_urgent: true,
+    is_grad_clearance: true,
+    image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500&auto=format&fit=crop&q=60"
+  },
+  {
+    id: 4,
+    title: "IKEA 書桌檯燈 (附燈泡)",
+    description: "光線溫和，讀書不傷眼。旋轉支架功能完好，附帶一個省電黃光燈泡。插電即用！",
+    price: 250,
+    category: "生活用品",
+    status: "販售中",
+    meetup_location: "文學院",
+    bargainable: false,
+    condition: "九成新",
+    seller_id: 103,
+    seller_name: "陳怡君",
+    seller_verified: false,
+    seller_rating: 5.0,
+    is_urgent: false,
+    is_grad_clearance: false,
+    image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=500&auto=format&fit=crop&q=60"
+  }
+];
+
+const QUICK_MESSAGES = [
+  "請問商品目前還在嗎？",
+  "請問價格有議價的空間嗎？",
+  "今天便於約在校園面交嗎？",
+  "面交約幾點比較方便呢？"
+];
+
+const PRESET_USER_DATA = {
+  id: 202,
+  name: "陳小明",
+  email: "student@g.ncu.edu.tw",
+  verified: true,
+  rating: 4.9,
+  avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60"
+};
+
+export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('ncu_market_logged_in') === 'true';
+  });
+  
+  // 修正：新增遺失的登入載入中狀態 state 宣告
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem('ncu_market_current_user');
+    return savedUser ? JSON.parse(savedUser) : PRESET_USER_DATA;
+  });
+
+  const [products, setProducts] = useState(() => {
+    const savedProducts = localStorage.getItem('ncu_market_products');
+    return savedProducts ? JSON.parse(savedProducts) : DEFAULT_PRODUCTS;
+  });
+
+  const [favorites, setFavorites] = useState(() => {
+    const savedFav = localStorage.getItem('ncu_market_favorites');
+    return savedFav ? JSON.parse(savedFav) : [2];
+  });
+
+  const [theme, setTheme] = useState('light');
+  const [currentTab, setCurrentTab] = useState('home'); 
+  const [selectedProduct, setSelectedProduct] = useState(null); 
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [activeCategory, setActiveCategory] = useState('全部');
+  const [activeLocation, setActiveLocation] = useState('全部');
+  const [activeStatus, setActiveStatus] = useState('全部');
+  const [sortBy, setSortBy] = useState('latest'); 
+  const [filterGraduation, setFilterGraduation] = useState(false);
+  const [filterUrgent, setFilterUrgent] = useState(false);
+
+  // Auth Inputs
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  // Chat Log & Notifications
+  const [chats, setChats] = useState(() => {
+    const savedChats = localStorage.getItem('ncu_market_chats');
+    const defaultChat = [
+      {
+        id: "chat-1",
+        productId: 1,
+        productTitle: "AirPods Pro 二代 (極新)",
+        productPrice: 3800,
+        productImage: "https://images.unsplash.com/photo-1588449668365-d15e397f6787?w=500&auto=format&fit=crop&q=60",
+        buyerId: 202,
+        buyerName: "陳小明",
+        sellerId: 101,
+        sellerName: "李大華",
+        lastMessage: "下午三點在宵夜街地標方便嗎？",
+        lastTimestamp: "15:30",
+        unread: false,
+        messages: [
+          { senderId: 202, text: "你好，請問 AirPods 還有嗎？", timestamp: "15:20", read: true },
+          { senderId: 101, text: "在的！可以約今天面交自取喔。", timestamp: "15:25", read: true },
+          { senderId: 202, text: "太好了！下午三點在宵夜街地標方便嗎？", timestamp: "15:30", read: true }
+        ]
+      }
+    ];
+    return savedChats ? JSON.parse(savedChats) : defaultChat;
+  });
+
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [chatInput, setChatInput] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [notifications, setNotifications] = useState([
+    { id: 1, text: '您收藏的「捷安特 6段變速二手腳踏車」有買家正在接洽中！', time: '10分鐘前', read: false },
+    { id: 2, text: '您的上架商品狀態已同步更新。', time: '3小時前', read: true }
+  ]);
+
+  const [aiProductImg, setAiProductImg] = useState(null);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiSuccessModal, setAiSuccessModal] = useState(false);
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(true);
+
+  // Form State
+  const [newProduct, setNewProduct] = useState({
+    title: '',
+    description: '',
+    price: '',
+    category: '3C電子',
+    meetup_location: '宵夜街',
+    bargainable: false,
+    condition: '九成新',
+    image: '',
+    is_urgent: false,
+    is_grad_clearance: false
+  });
+
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewTags, setReviewTags] = useState([]);
+
+  const exploreSectionRef = useRef(null);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem('ncu_market_logged_in', isLoggedIn);
+    localStorage.setItem('ncu_market_current_user', JSON.stringify(currentUser));
+  }, [isLoggedIn, currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('ncu_market_products', JSON.stringify(products));
+  }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem('ncu_market_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  useEffect(() => {
+    localStorage.setItem('ncu_market_chats', JSON.stringify(chats));
+  }, [chats]);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chats, activeChatId]);
+
+  const addToast = (message, type = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3000);
+  };
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  const handleAuthSubmit = (e) => {
+    e.preventDefault();
+    if (!emailInput.trim() || !passwordInput.trim()) {
+      addToast("請完整輸入帳號與密碼", "error");
+      return;
+    }
+
+    setIsLoggingIn(true);
+    setTimeout(() => {
+      const parsedName = nameInput.trim() || emailInput.split('@')[0];
+      const loggedUser = {
+        id: Date.now(),
+        name: parsedName,
+        email: emailInput,
+        verified: true, // Defaulting verified as requested (no verification flow blocking)
+        rating: 5.0,
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60"
+      };
+
+      setCurrentUser(loggedUser);
+      setIsLoggedIn(true);
+      addToast(`登入成功！歡迎使用二手交易平台，${parsedName}`, "success");
+      setIsLoggingIn(false);
+    }, 800);
+  };
+
+  const toggleVerificationStatus = () => {
+    const updatedStatus = !currentUser.verified;
+    setCurrentUser(prev => ({ ...prev, verified: updatedStatus }));
+    addToast(updatedStatus ? "已開啟實名認證狀態 ☑" : "已關閉實名認證狀態", "info");
+  };
+
+  const toggleFavorite = (prodId, e) => {
+    e.stopPropagation();
+    if (favorites.includes(prodId)) {
+      setFavorites(prev => prev.filter(id => id !== prodId));
+      addToast("已移出我的最愛", "info");
+    } else {
+      setFavorites(prev => [...prev, prodId]);
+      addToast("已成功加入收藏清單", "success");
+    }
+  };
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAiProductImg(reader.result);
+      setIsAiAnalyzing(true);
+      addToast("AI 正在光學分析產品，預測最佳標題與合適分類...", "info");
+
+      setTimeout(() => {
+        // Light front-end intelligent helper
+        setNewProduct(prev => ({
+          ...prev,
+          title: "精選優質生活物件",
+          description: "經系統智慧辨識：此商品儲存狀況優良，具備實用二手價值。面交時建議當場確認細節。",
+          price: 350,
+          category: "生活用品",
+          condition: "九成新"
+        }));
+        setIsAiAnalyzing(false);
+        setAiSuccessModal(true);
+        addToast("智慧屬性預測完成！已自動為您帶入對應欄位", "success");
+      }, 1500);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreateProduct = (e) => {
+    e.preventDefault();
+    if (!newProduct.title || !newProduct.price || !newProduct.description) {
+      addToast("請填寫必填欄位：名稱、價格與描述資訊！", "error");
+      return;
+    }
+
+    const createdItem = {
+      id: Date.now(),
+      title: newProduct.title,
+      description: newProduct.description,
+      price: parseInt(newProduct.price),
+      category: newProduct.category,
+      status: "販售中",
+      meetup_location: newProduct.meetup_location,
+      bargainable: newProduct.bargainable,
+      condition: newProduct.condition,
+      seller_id: currentUser.id,
+      seller_name: currentUser.name,
+      seller_verified: currentUser.verified,
+      seller_rating: currentUser.rating,
+      is_urgent: newProduct.is_urgent,
+      is_grad_clearance: newProduct.is_grad_clearance,
+      is_new_upload: true,
+      image: aiProductImg || newProduct.image || "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=500&auto=format&fit=crop&q=60"
+    };
+
+    setProducts(prev => [createdItem, ...prev]);
+    addToast("二手物件發佈成功！已在首頁置頂展示 🚀", "success");
+
+    // Clean filters and search on home tab
+    setFilterGraduation(false);
+    setFilterUrgent(false);
+    setActiveCategory('全部');
+    setActiveLocation('全部');
+    setActiveStatus('全部');
+    setSearchKeyword('');
+    setSortBy('latest');
+
+    // Reset Form
+    setNewProduct({
+      title: '',
+      description: '',
+      price: '',
+      category: '3C電子',
+      meetup_location: '宵夜街',
+      bargainable: false,
+      condition: '九成新',
+      image: '',
+      is_urgent: false,
+      is_grad_clearance: false
+    });
+    setAiProductImg(null);
+    setCurrentTab('home');
+
+    setTimeout(() => {
+      exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 300);
+  };
+
+  const handleStartChat = (product) => {
+    const existingChat = chats.find(c => c.productId === product.id && c.buyerId === currentUser.id);
+    if (existingChat) {
+      setActiveChatId(existingChat.id);
+    } else {
+      const newChatId = `chat-${Date.now()}`;
+      const newChat = {
+        id: newChatId,
+        productId: product.id,
+        productTitle: product.title,
+        productPrice: product.price,
+        productImage: product.image,
+        buyerId: currentUser.id,
+        buyerName: currentUser.name,
+        sellerId: product.seller_id,
+        sellerName: product.seller_name,
+        lastMessage: "您好，我對這個物件很有興趣！",
+        lastTimestamp: "剛剛",
+        unread: false,
+        messages: [
+          { senderId: currentUser.id, text: `您好，我對您的商品「${product.title}」很有興趣！`, timestamp: "剛剛", read: true }
+        ]
+      };
+      setChats(prev => [newChat, ...prev]);
+      setActiveChatId(newChatId);
+    }
+    setCurrentTab('chat');
+    setSelectedProduct(null); 
+  };
+
+  const handleSendMessage = (textToSend = null) => {
+    const finalMsg = textToSend || chatInput;
+    if (!finalMsg.trim()) return;
+
+    setChats(prev => prev.map(c => {
+      if (c.id === activeChatId) {
+        const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const newMessages = [
+          ...c.messages,
+          { senderId: currentUser.id, text: finalMsg, timestamp: timeNow, read: false }
+        ];
+
+        // AI Assistant helper replies inside chat if enabled
+        if (aiAssistantEnabled) {
+          setTimeout(() => {
+            setChats(prevChats => prevChats.map(item => {
+              if (item.id === c.id) {
+                const autoReply = "收到，我會盡快在面交約定地點跟您確認，感謝配合！";
+                return {
+                  ...item,
+                  lastMessage: autoReply,
+                  lastTimestamp: "剛剛",
+                  unread: true,
+                  messages: [
+                    ...item.messages,
+                    { senderId: 101, text: autoReply, timestamp: "剛剛", read: false }
+                  ]
+                };
+              }
+              return item;
+            }));
+            addToast("系統助理：已接收到訊息通知！", "info");
+          }, 1500);
+        }
+
+        return {
+          ...c,
+          lastMessage: finalMsg,
+          lastTimestamp: "剛剛",
+          messages: newMessages
+        };
+      }
+      return c;
+    }));
+
+    if (!textToSend) setChatInput('');
+  };
+
+  const handleUpdateProductStatus = (prodId, newStatus) => {
+    setProducts(prev => prev.map(p => {
+      if (p.id === prodId) {
+        addToast(`已成功變更商品狀態為：【${newStatus}】`, "success");
+        return { ...p, status: newStatus };
+      }
+      return p;
+    }));
+  };
+
+  const handleSelectGradClearance = () => {
+    setFilterGraduation(true);
+    setFilterUrgent(false);
+    setActiveCategory('全部');
+    addToast("已為您切換至「畢業出清物件」專屬清單 🎓", "info");
+    setTimeout(() => {
+      exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 200);
+  };
+
+  const handleSelectUrgentClearance = () => {
+    setFilterUrgent(true);
+    setFilterGraduation(false);
+    setActiveCategory('全部');
+    addToast("已為您切換至「急售熱門物件」專屬清單 🔥", "info");
+    setTimeout(() => {
+      exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 200);
+  };
+
+  const filteredProducts = products.filter(p => {
+    const matchesKeyword = p.title.toLowerCase().includes(searchKeyword.toLowerCase()) || 
+                           p.description.toLowerCase().includes(searchKeyword.toLowerCase());
+    const matchesCategory = activeCategory === '全部' || p.category === activeCategory;
+    const matchesLocation = activeLocation === '全部' || p.meetup_location === activeLocation;
+    const matchesStatus = activeStatus === '全部' || p.status === activeStatus;
+    const matchesGrad = !filterGraduation || p.is_grad_clearance;
+    const matchesUrgent = !filterUrgent || p.is_urgent;
+
+    return matchesKeyword && matchesCategory && matchesLocation && matchesStatus && matchesGrad && matchesUrgent;
+  }).sort((a, b) => {
+    if (sortBy === 'price-high') return b.price - a.price;
+    if (sortBy === 'price-low') return a.price - b.price;
+    if (sortBy === 'urgent') return b.is_urgent ? 1 : -1;
+    if (sortBy === 'grad') return b.is_grad_clearance ? 1 : -1;
+    return b.id - a.id; 
+  });
+
+  if (!isLoggedIn) {
+    return (
+      <div className={`min-h-screen font-sans flex items-center justify-center p-4 relative overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-800'}`}>
+        <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-teal-500/10 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-indigo-500/10 blur-[120px]" />
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-md p-8 rounded-3xl shadow-2xl relative z-10 space-y-6">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="bg-gradient-to-br from-teal-500 to-indigo-600 text-white p-3.5 rounded-2xl shadow-lg">
+              <ShoppingBag className="w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="font-black text-2xl tracking-tight bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent">
+                NCU Campus Market
+              </h1>
+              <span className="text-xs text-slate-400 block mt-1">國立中央大學 · 二手物資共享服務</span>
+            </div>
+          </div>
+
+          <div className="h-px bg-slate-100 dark:bg-slate-800 w-full" />
+
+          <form onSubmit={handleAuthSubmit} className="space-y-4 text-xs">
+            <div className="space-y-1">
+              <h2 className="font-extrabold text-base text-slate-800 dark:text-slate-100 text-center">
+                {isRegistering ? "註冊新帳號" : "會員密碼登入"}
+              </h2>
+              <p className="text-[10px] text-slate-400 text-center leading-relaxed">
+                輸入您的電子信箱帳號及設定密碼，即刻開始進行校園交易。
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-slate-500 mb-1 font-bold flex items-center gap-1">
+                <Mail className="w-3.5 h-3.5" /> 帳號 / 電子信箱
+              </label>
+              <input 
+                type="email" 
+                required
+                placeholder="請輸入註冊信箱" 
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-500 mb-1 font-bold flex items-center gap-1">
+                <Key className="w-3.5 h-3.5" /> 登入密碼
+              </label>
+              <input 
+                type="password" 
+                required
+                placeholder="請輸入您的密碼" 
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+              />
+            </div>
+
+            {isRegistering && (
+              <div>
+                <label className="block text-slate-500 mb-1 font-bold flex items-center gap-1">
+                  <User className="w-3.5 h-3.5" /> 使用者暱稱 / 姓名
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="輸入公開顯示名稱，例如：陳小明" 
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoggingIn}
+              className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-3 rounded-xl font-bold text-xs shadow-md hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-2 mt-2"
+            >
+              {isLoggingIn ? (
+                <span className="w-4 h-4 border-2 border-white dark:border-slate-900 border-t-transparent rounded-full animate-spin"></span>
+              ) : (
+                <span>{isRegistering ? "註冊並自動登入" : "立即安全登入平台"}</span>
+              )}
+            </button>
+          </form>
+
+          <div className="flex items-center my-4">
+            <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+            <span className="px-3 text-[10px] text-slate-400 font-bold shrink-0">切換登入管道</span>
+            <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <span>{isRegistering ? "已經擁有帳號？" : "還沒有註冊過帳號嗎？"}</span>
+            <button 
+              onClick={() => setIsRegistering(!isRegistering)}
+              className="text-teal-600 hover:underline font-bold"
+            >
+              {isRegistering ? "切換至登入" : "快速註冊新帳號"}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 py-2 px-3 rounded-lg border border-emerald-100 dark:border-emerald-900">
+            <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>本地資料庫加密系統完全啟動</span>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`min-h-screen font-sans ${theme === 'dark' ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-800'}`}>
+      
+      {/* Top Banner */}
+      <div className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white text-xs md:text-sm py-2 px-4 flex justify-between items-center shadow-inner">
+        <div className="flex items-center gap-2 font-medium">
+          <GraduationCap className="w-4 h-4 animate-bounce" />
+          <span>正式運行環境 (NCU Campus Market) - 快速面交 & 物盡其用！</span>
+        </div>
+        <div className="hidden md:flex items-center gap-4 text-xs font-semibold">
+          <span>校園資料系統已儲存 {products.length} 項優質二手物件</span>
+        </div>
+      </div>
+
+      {/* Header Container */}
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-white/95 dark:bg-slate-900/95 border-b border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-teal-500 to-indigo-600 text-white p-2.5 rounded-2xl shadow-md">
+              <ShoppingBag className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-teal-600 to-indigo-600 bg-clip-text text-transparent">
+                NCU Campus Market
+              </h1>
+              <span className="text-[10px] text-slate-400 block -mt-1 font-mono">校園二手市集 · 正式版</span>
+            </div>
+          </div>
+
+          <div className="hidden md:flex items-center flex-1 max-w-md mx-8 relative">
+            <Search className="w-4 h-4 absolute left-3 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="搜尋教科書、耳機、生活用具物資..." 
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:scale-105 transition"
+            >
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
+
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:scale-105 transition"
+              >
+                <Bell className="w-5 h-5" />
+                {notifications.some(n => !n.read) && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border border-white"></span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-4 animate-fade-in text-slate-800 dark:text-white">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-bold text-sm flex items-center gap-1">
+                      <Bell className="w-4 h-4 text-teal-600" /> 即時校園通知
+                    </h4>
+                  </div>
+                  <div className="space-y-2.5 max-h-60 overflow-y-auto">
+                    {notifications.map(n => (
+                      <div 
+                        key={n.id} 
+                        className={`p-2.5 rounded-lg text-xs leading-relaxed transition ${n.read ? 'bg-slate-50 dark:bg-slate-800/50 text-slate-500' : 'bg-teal-50/70 dark:bg-teal-950/30 border-l-2 border-teal-500 text-slate-800 dark:text-white'}`}
+                      >
+                        <p>{n.text}</p>
+                        <span className="text-[10px] text-slate-400 block mt-1">{n.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="hidden lg:flex items-center gap-2 border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-full text-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="text-emerald-700 dark:text-emerald-300 font-bold">
+                ☑ {currentUser.verified ? "已啟動實名" : "一般成員"}
+              </span>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsLoggedIn(false);
+                addToast("您已安全登出 🚪");
+              }}
+              className="p-2 rounded-full bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-300 hover:scale-105 transition"
+              title="登出帳戶"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* --- MOBILE SEARCH BAR --- */}
+      <div className="md:hidden p-4 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="搜尋教科書、耳機、生活用具物資..." 
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          />
+        </div>
+      </div>
+
+      {/* --- MAIN PAGE LAYOUT --- */}
+      <main className="max-w-7xl mx-auto px-4 py-6">
+
+        {/* --- DYNAMIC ROUTED VIEW --- */}
+        {currentTab === 'home' && (
+          <div className="space-y-8 animate-fade-in">
+            
+            {/* --- HERO / FEATURE CARDS --- */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div 
+                onClick={handleSelectGradClearance}
+                className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-6 text-white cursor-pointer hover:shadow-lg transition relative overflow-hidden group hover:-translate-y-1 transform duration-300"
+              >
+                <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-15 text-white group-hover:scale-110 transition duration-500">
+                  <GraduationCap className="w-40 h-40" />
+                </div>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="bg-white/20 p-2 rounded-2xl backdrop-blur-md">
+                    <GraduationCap className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs bg-purple-400/50 px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">GRAD CLEARANCE</span>
+                </div>
+                <h3 className="font-extrabold text-xl mb-1">畢業出清專區</h3>
+                <p className="text-white/80 text-xs leading-relaxed mb-4">
+                  大四、研二學長姐清空宿舍！精選教科書、電扇、收納箱等生活用品，立即點擊篩選。
+                </p>
+                <span className="text-xs font-bold flex items-center gap-1 hover:underline">
+                  立即查看畢業出清好物 <ChevronRight className="w-3 h-3" />
+                </span>
+              </div>
+
+              <div 
+                onClick={handleSelectUrgentClearance}
+                className="bg-gradient-to-br from-rose-500 to-orange-500 rounded-3xl p-6 text-white cursor-pointer hover:shadow-lg transition relative overflow-hidden group hover:-translate-y-1 transform duration-300"
+              >
+                <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-15 text-white group-hover:scale-110 transition duration-500">
+                  <Flame className="w-40 h-40" />
+                </div>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="bg-white/20 p-2 rounded-2xl backdrop-blur-md">
+                    <Flame className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <span className="text-xs bg-rose-400/50 px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">URGENT</span>
+                </div>
+                <h3 className="font-extrabold text-xl mb-1">同學急售專區</h3>
+                <p className="text-white/80 text-xs leading-relaxed mb-4">
+                  限時甩賣、出清大骨折！點擊查看所有急售品，可面交直接自取。
+                </p>
+                <span className="text-xs font-bold flex items-center gap-1 hover:underline">
+                  探索限時出清商品 <ChevronRight className="w-3 h-3" />
+                </span>
+              </div>
+
+              <div 
+                onClick={() => {
+                  setCurrentTab('profile');
+                  addToast("已為您切換至個人設定。您可在設定中開啟或關閉認證標章 ☑", "info");
+                }}
+                className="bg-gradient-to-br from-teal-500 to-emerald-600 rounded-3xl p-6 text-white cursor-pointer hover:shadow-lg transition relative overflow-hidden group hover:-translate-y-1 transform duration-300"
+              >
+                <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-15 text-white group-hover:scale-110 transition duration-500">
+                  <CheckCircle className="w-40 h-40" />
+                </div>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="bg-white/20 p-2 rounded-2xl backdrop-blur-md">
+                    <CheckCircle className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs bg-emerald-400/50 px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">VERIFIED</span>
+                </div>
+                <h3 className="font-extrabold text-xl mb-1">設定帳號認證標章</h3>
+                <p className="text-white/80 text-xs leading-relaxed mb-4">
+                  前往個人管理頁面，開啟實名認證徽章。解鎖徽章將大幅增加買賣雙方誠信！
+                </p>
+                <span className="text-xs font-bold flex items-center gap-1 hover:underline">
+                  立即進行設定調整 <ChevronRight className="w-3 h-3" />
+                </span>
+              </div>
+            </div>
+
+            {/* --- INTERACTIVE CAMPUS MAP NAVIGATOR --- */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="font-extrabold text-lg flex items-center gap-2">
+                    <MapPin className="text-teal-600 w-5 h-5 animate-bounce" /> 
+                    中央大學 NCU 面交地標篩選
+                  </h3>
+                  <p className="text-slate-400 text-xs">
+                    常用校園面交安全地點！點擊下方地標，直接篩選在該位置交易的周邊商品。
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">當前選取地標：</span>
+                  <span className="bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 px-3 py-1.5 rounded-full text-xs font-bold border border-teal-100 dark:border-teal-900">
+                    {activeLocation === '全部' ? '所有地點' : activeLocation}
+                  </span>
+                  {activeLocation !== '全部' && (
+                    <button 
+                      onClick={() => setActiveLocation('全部')}
+                      className="text-xs text-slate-400 hover:text-slate-700 underline"
+                    >
+                      重設
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  { name: "宵夜街", color: "from-amber-400 to-orange-500", desc: "宵夜、晚餐、大門口外" },
+                  { name: "女十四宿舍", color: "from-rose-400 to-pink-500", desc: "女宿區域、近操場" },
+                  { name: "管院", color: "from-blue-400 to-indigo-500", desc: "管理學院二館、草皮旁" },
+                  { name: "文學院", color: "from-emerald-400 to-teal-500", desc: "文一、文二、文三館" },
+                  { name: "中央大學後門", color: "from-violet-400 to-purple-500", desc: "靠近後門松苑、宵夜街尾" }
+                ].map((loc, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setActiveLocation(loc.name);
+                      addToast(`已篩選面交地點：【${loc.name}】的商品`, "info");
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition group relative overflow-hidden ${
+                      activeLocation === loc.name 
+                        ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/30 shadow-md ring-2 ring-teal-500/20' 
+                        : 'border-slate-100 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50'
+                    }`}
+                  >
+                    <div className="relative z-10">
+                      <div className={`w-3 h-3 rounded-full bg-gradient-to-tr ${loc.color} mb-2 shadow`}></div>
+                      <h4 className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-teal-600 transition">
+                        {loc.name}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 leading-tight mt-1">{loc.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* --- FILTER BAR & CONTROLS --- */}
+            <div id="product-explore" ref={exploreSectionRef} className="flex flex-col gap-4 scroll-mt-24">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+                <div className="flex flex-wrap gap-2">
+                  {['全部', '3C電子', '教科書', '生活用品', '生活出行', '美妝服飾', '其他'].map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveCategory(cat)}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                        activeCategory === cat 
+                          ? 'bg-teal-600 text-white shadow-md' 
+                          : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3 self-end md:self-auto">
+                  <select
+                    value={activeStatus}
+                    onChange={(e) => setActiveStatus(e.target.value)}
+                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs px-3 py-1.5 rounded-lg focus:outline-none text-slate-700 dark:text-white"
+                  >
+                    <option value="全部">全部商品狀態</option>
+                    <option value="販售中">販售中</option>
+                    <option value="已預訂">已預訂</option>
+                    <option value="面交中">面交中</option>
+                    <option value="已售出">已售出</option>
+                  </select>
+
+                  <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    <select 
+                      value={sortBy} 
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="bg-transparent focus:outline-none text-slate-700 dark:text-white font-medium"
+                    >
+                      <option value="latest">最新刊登</option>
+                      <option value="price-low">價格：從低到高</option>
+                      <option value="price-high">價格：從高到低</option>
+                      <option value="urgent">優先急售</option>
+                      <option value="grad">優先畢業出清</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {filterGraduation && (
+                  <span className="bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                    畢業出清
+                    <button onClick={() => setFilterGraduation(false)} className="hover:text-purple-950 text-xs ml-1 font-bold">×</button>
+                  </span>
+                )}
+                {filterUrgent && (
+                  <span className="bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                    急售商品
+                    <button onClick={() => setFilterUrgent(false)} className="hover:text-rose-950 text-xs ml-1 font-bold">×</button>
+                  </span>
+                )}
+                {(filterGraduation || filterUrgent || activeCategory !== '全部' || activeLocation !== '全部' || activeStatus !== '全部' || searchKeyword) && (
+                  <button 
+                    onClick={() => {
+                      setFilterGraduation(false);
+                      setFilterUrgent(false);
+                      setActiveCategory('全部');
+                      setActiveLocation('全部');
+                      setActiveStatus('全部');
+                      setSearchKeyword('');
+                    }}
+                    className="text-xs text-rose-500 hover:underline font-bold"
+                  >
+                    重設所有篩選條件
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* --- PRODUCTS GRID --- */}
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-extrabold text-lg text-slate-800 dark:text-white">
+                  精選探索商品 ({filteredProducts.length} 件)
+                </h3>
+              </div>
+
+              {filteredProducts.length === 0 ? (
+                <div className="bg-white dark:bg-slate-800 border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl p-12 text-center">
+                  <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-1">找不到符合的二手商品</h4>
+                  <p className="text-xs text-slate-400">您可以試著修改關鍵字、清空篩選條件或點選其他面交地標！</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {filteredProducts.map(p => (
+                    <div 
+                      key={p.id}
+                      onClick={() => setSelectedProduct(p)}
+                      className={`bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300 cursor-pointer group flex flex-col justify-between ${
+                        p.is_new_upload ? 'ring-2 ring-teal-500 border-teal-500 animate-pulse-once' : 'border-slate-100 dark:border-slate-700'
+                      }`}
+                    >
+                      <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-700">
+                        <img 
+                          src={p.image} 
+                          alt={p.title} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        />
+                        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold shadow-sm ${
+                            p.status === '販售中' ? 'bg-teal-500 text-white' :
+                            p.status === '已預訂' ? 'bg-amber-500 text-white' :
+                            p.status === '面交中' ? 'bg-indigo-500 text-white' :
+                            'bg-slate-500 text-white'
+                          }`}>
+                            {p.status}
+                          </span>
+                          {p.is_new_upload && (
+                            <span className="bg-gradient-to-r from-teal-600 to-indigo-600 text-white px-2.5 py-1 rounded-full text-[10px] font-black shadow-sm">
+                              NEW ✨
+                            </span>
+                          )}
+                          {p.is_urgent && (
+                            <span className="bg-rose-500 text-white px-2.5 py-1 rounded-full text-[10px] font-extrabold shadow-sm flex items-center gap-0.5 animate-pulse">
+                              <Flame className="w-3.5 h-3.5" /> 急售
+                            </span>
+                          )}
+                          {p.is_grad_clearance && (
+                            <span className="bg-purple-600 text-white px-2.5 py-1 rounded-full text-[10px] font-extrabold shadow-sm flex items-center gap-0.5">
+                              <GraduationCap className="w-3.5 h-3.5" /> 畢業出清
+                            </span>
+                          )}
+                        </div>
+
+                        <button 
+                          onClick={(e) => toggleFavorite(p.id, e)}
+                          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-900 shadow-md backdrop-blur-sm transition"
+                        >
+                          <Heart className={`w-4 h-4 ${favorites.includes(p.id) ? 'fill-rose-500 text-rose-500' : 'text-slate-500'}`} />
+                        </button>
+
+                        <div className="absolute bottom-3 left-3 bg-slate-900/70 backdrop-blur-sm px-2.5 py-1 rounded-full text-[10px] text-white flex items-center gap-1 font-medium">
+                          <MapPin className="w-3.5 h-3.5 text-teal-400" />
+                          <span>{p.meetup_location}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block mb-1">
+                            {p.category}
+                          </span>
+                          <h4 className="font-extrabold text-sm line-clamp-1 group-hover:text-teal-600 transition text-slate-800 dark:text-white">
+                            {p.title}
+                          </h4>
+                          <p className="text-xs text-slate-400 line-clamp-2 mt-1 leading-relaxed">
+                            {p.description}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-slate-50 dark:border-slate-700 flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-slate-400 line-through -mb-1">
+                              {p.bargainable ? '可議價' : '不議價'}
+                            </span>
+                            <span className="font-black text-lg text-rose-500">
+                              ${p.price}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                            <div className="bg-slate-100 dark:bg-slate-700 w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                              {p.seller_name[0]}
+                            </div>
+                            <div>
+                              <span className="block text-slate-700 dark:text-slate-300 font-bold truncate max-w-[60px] flex items-center gap-0.5">
+                                {p.seller_name} {p.seller_verified && <span className="text-teal-500">☑</span>}
+                              </span>
+                              <span className="text-amber-500 font-bold">★ {p.seller_rating}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-slate-100 dark:bg-slate-800/40 rounded-3xl p-6 border border-slate-200/50 dark:border-slate-700/50 grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <h4 className="text-2xl font-black text-teal-600">30 分鐘內</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">面交成交 5 筆</p>
+              </div>
+              <div className="border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-700 pt-4 md:pt-0">
+                <h4 className="text-2xl font-black text-indigo-600">92%</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">AI 智慧分析精準度</p>
+              </div>
+              <div className="border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-700 pt-4 md:pt-0">
+                <h4 className="text-2xl font-black text-purple-600">3,200+ 件</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">畢業學長姐託售好物</p>
+              </div>
+              <div className="border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-700 pt-4 md:pt-0">
+                <h4 className="text-2xl font-black text-rose-600">☑ 100%</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">誠信安全保障</p>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* --- AI POST / LIST NEW ITEM TAB --- */}
+        {currentTab === 'post' && (
+          <div className="max-w-3xl mx-auto space-y-6">
+            <div className="bg-gradient-to-r from-teal-500 to-indigo-600 rounded-3xl p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="space-y-2 text-center md:text-left">
+                <span className="bg-white/20 px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-widest inline-block">
+                  AI Sparkles Beta
+                </span>
+                <h2 className="font-extrabold text-2xl">AI 智慧快速拍照刊登</h2>
+                <p className="text-xs text-white/80 max-w-md leading-relaxed">
+                  上傳商品照片，AI 機器人將自動進行影像辨識，並生成符合校園市場的「精準標題」、「詳細描述」與「建議分類」！
+                </p>
+              </div>
+              <div className="relative">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  id="ai-photo-upload" 
+                  onChange={handleImageFileChange}
+                  className="hidden" 
+                />
+                <label 
+                  htmlFor="ai-photo-upload"
+                  className="bg-white text-teal-700 hover:bg-teal-50 px-5 py-3 rounded-2xl font-bold text-sm shadow-lg flex items-center gap-2 cursor-pointer transition active:scale-95"
+                >
+                  <Camera className="w-5 h-5 text-teal-600" />
+                  <span>點我拍照 / 選擇物件相片</span>
+                </label>
+              </div>
+            </div>
+
+            {aiSuccessModal && (
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-4 rounded-2xl flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-bold text-sm text-emerald-800 dark:text-emerald-300">AI 智慧辨識與屬性帶入成功！</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    已為您自動填充下方表單。您可以視實際需求調整新舊程度、面交地點或價格。
+                  </p>
+                  <button 
+                    onClick={() => setAiSuccessModal(false)}
+                    className="text-xs text-emerald-700 hover:underline mt-2 font-bold"
+                  >
+                    確認套用
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
+              <h3 className="font-extrabold text-lg mb-6 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-teal-600" /> 填寫商品上架規格
+              </h3>
+
+              <form onSubmit={handleCreateProduct} className="space-y-5 text-sm">
+                
+                {aiProductImg && (
+                  <div>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">上載物件相片</span>
+                    <div className="relative w-40 h-40 rounded-2xl overflow-hidden border">
+                      <img src={aiProductImg} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button"
+                        onClick={() => { setAiProductImg(null); }}
+                        className="absolute top-1.5 right-1.5 bg-rose-500 text-white p-1 rounded-full"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">商品名稱 *</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="例：AirPods Pro 二代" 
+                      value={newProduct.title}
+                      onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">價格 (TWD) *</label>
+                    <input 
+                      type="number" 
+                      required
+                      placeholder="設定價格 (TWD)" 
+                      value={newProduct.price}
+                      onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">商品分類 *</label>
+                  <select
+                    value={newProduct.category}
+                    onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    {['3C電子', '教科書', '生活用品', '生活出行', '美妝服飾', '其他'].map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">常用面交地點 *</label>
+                    <select
+                      value={newProduct.meetup_location}
+                      onChange={(e) => setNewProduct({ ...newProduct, meetup_location: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      {['宵夜街', '女十四宿舍', '管院', '文學院', '中央大學後門'].map(loc => (
+                        <option key={loc} value={loc}>{loc}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">新舊程度 *</label>
+                    <select
+                      value={newProduct.condition}
+                      onChange={(e) => setNewProduct({ ...newProduct, condition: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      {['全新', '九成新', '八成新', '七成新', '五成新以下'].map(cond => (
+                        <option key={cond} value={cond}>{cond}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">商品細部描述 *</label>
+                  <textarea 
+                    rows="4"
+                    required
+                    placeholder="請詳細描述商品的購買管道、功能細節、新舊痕跡..." 
+                    value={newProduct.description}
+                    onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">外部商品圖片連結 (選填)</label>
+                  <input 
+                    type="text" 
+                    placeholder="可輸入圖片網址，或使用上方 AI 智慧拍照功能進行預測分析" 
+                    value={newProduct.image}
+                    onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+
+                <div className="space-y-2 border-t border-slate-100 dark:border-slate-700 pt-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={newProduct.bargainable}
+                      onChange={(e) => setNewProduct({ ...newProduct, bargainable: e.target.checked })}
+                      className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
+                    />
+                    <span className="font-medium text-slate-700 dark:text-slate-300">是否允許買家議價</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={newProduct.is_urgent}
+                      onChange={(e) => setNewProduct({ ...newProduct, is_urgent: e.target.checked })}
+                      className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
+                    />
+                    <span className="font-medium text-rose-600 flex items-center gap-0.5">
+                      <Flame className="w-3.5 h-3.5 fill-rose-100" /> 急售商品標籤 (將標注醒目火焰圖標)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={newProduct.is_grad_clearance}
+                      onChange={(e) => setNewProduct({ ...newProduct, is_grad_clearance: e.target.checked })}
+                      className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4"
+                    />
+                    <span className="font-medium text-purple-600 flex items-center gap-0.5">
+                      <GraduationCap className="w-3.5 h-3.5" /> 畢業出清大出清專屬物件
+                    </span>
+                  </label>
+                </div>
+
+                <div className="flex gap-3 justify-end pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => { setCurrentTab('home'); }}
+                    className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  >
+                    取消
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-indigo-600 text-white font-bold shadow-md hover:shadow-lg hover:brightness-110 active:scale-95 transition"
+                  >
+                    立即上架物件
+                  </button>
+                </div>
+
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* --- CHAT SYSTEM TAB --- */}
+        {currentTab === 'chat' && (
+          <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl overflow-hidden shadow-sm flex flex-col md:flex-row h-[600px] animate-fade-in">
+            <div className="w-full md:w-80 border-r border-slate-100 dark:border-slate-700 flex flex-col h-full bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="font-extrabold text-base flex items-center gap-1.5">
+                  <MessageCircle className="w-5 h-5 text-teal-600" /> 
+                  1對1即時對談聊天室
+                </h3>
+                <p className="text-[10px] text-slate-400 leading-tight mt-1">
+                  請同學主動約定規格書上列載的 NCU 面交地點。
+                </p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-1 p-2">
+                {chats.length === 0 ? (
+                  <p className="text-xs text-slate-400 p-4 text-center">暫無對話紀錄</p>
+                ) : (
+                  chats.map(chat => {
+                    const otherPartyName = currentUser.id === 202 ? chat.sellerName : chat.buyerName;
+                    const isSelected = chat.id === activeChatId;
+
+                    return (
+                      <div
+                        key={chat.id}
+                        onClick={() => {
+                          setActiveChatId(chat.id);
+                          setChats(prev => prev.map(c => c.id === chat.id ? { ...c, unread: false } : c));
+                        }}
+                        className={`p-3 rounded-2xl cursor-pointer transition flex items-center gap-3 ${
+                          isSelected 
+                            ? 'bg-teal-50 dark:bg-teal-950/30 border border-teal-100 dark:border-teal-900 shadow-sm' 
+                            : 'hover:bg-slate-100/50 dark:hover:bg-slate-700/50 border border-transparent'
+                        }`}
+                      >
+                        <div className="relative shrink-0">
+                          <img 
+                            src={chat.productImage} 
+                            alt={chat.productTitle} 
+                            className="w-11 h-11 rounded-xl object-cover"
+                          />
+                          {chat.unread && (
+                            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full border border-white text-[9px] text-white flex items-center justify-center font-bold">
+                              1
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-extrabold text-xs text-slate-800 dark:text-white flex items-center gap-1">
+                              {otherPartyName} <span className="text-[10px] text-teal-600 font-normal">☑ 認證</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400">{chat.lastTimestamp}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 truncate font-semibold">
+                            {chat.productTitle}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 leading-relaxed">
+                            {chat.lastMessage}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 flex flex-col h-full bg-white dark:bg-slate-950/10">
+              {activeChatId ? (() => {
+                const activeChat = chats.find(c => c.id === activeChatId);
+                const otherPartyName = currentUser.id === 202 ? activeChat.sellerName : activeChat.buyerName;
+
+                return (
+                  <>
+                    <div className="p-3 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={activeChat.productImage} 
+                          alt={activeChat.productTitle} 
+                          className="w-10 h-10 rounded-lg object-cover"
+                        />
+                        <div>
+                          <h4 className="font-bold text-xs text-slate-800 dark:text-white flex items-center gap-1">
+                            對談成員：{otherPartyName} <span className="text-teal-500 font-normal text-[10px]">☑ 實名認證</span>
+                          </h4>
+                          <span className="text-[10px] text-slate-400 font-semibold truncate block max-w-[200px]">
+                            {activeChat.productTitle} (${activeChat.productPrice})
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={aiAssistantEnabled} 
+                            onChange={(e) => setAiAssistantEnabled(e.target.checked)} 
+                            className="w-3.5 h-3.5 text-teal-600 rounded" 
+                          />
+                          <span className="text-[10px] font-bold text-slate-500 flex items-center gap-0.5">
+                            <Sparkles className="w-3 h-3 text-teal-500" /> AI 智慧輔助回覆
+                          </span>
+                        </label>
+                        <button 
+                          onClick={() => {
+                            const prod = products.find(p => p.id === activeChat.productId);
+                            if (prod) setSelectedProduct(prod);
+                          }}
+                          className="text-xs text-teal-600 hover:underline font-bold"
+                        >
+                          查看商品
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                      {activeChat.messages.map((msg, index) => {
+                        const isMe = msg.senderId === currentUser.id;
+                        return (
+                          <div 
+                            key={index} 
+                            className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div className={`max-w-[70%] p-3 rounded-2xl text-xs leading-relaxed ${
+                              isMe 
+                                ? 'bg-gradient-to-br from-teal-500 to-indigo-600 text-white rounded-br-none' 
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white rounded-bl-none'
+                            }`}>
+                              <p className="whitespace-pre-wrap">{msg.text}</p>
+                              <div className="flex items-center justify-end gap-1 text-[9px] text-white/70 dark:text-slate-400 mt-1">
+                                <span>{msg.timestamp}</span>
+                                {isMe && (
+                                  <span className="text-[9px] font-bold">
+                                    <CheckCheck className="w-3.5 h-3.5 inline text-teal-200" /> 已讀
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div ref={chatEndRef} />
+                    </div>
+
+                    <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto bg-slate-50/50 dark:bg-slate-900/30">
+                      <span className="text-[10px] font-bold text-slate-400 shrink-0">快捷：</span>
+                      {QUICK_MESSAGES.map((msg, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSendMessage(msg)}
+                          className="bg-white dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 text-[10px] font-bold px-2.5 py-1 rounded-full text-slate-600 dark:text-slate-300 transition shrink-0"
+                        >
+                          {msg}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="p-3 border-t border-slate-100 dark:border-slate-700 flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="請輸入您想詢問的商品問題或約定面交細節..." 
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
+                        className="flex-1 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none"
+                      />
+                      <button 
+                        onClick={() => handleSendMessage()}
+                        className="bg-teal-600 text-white p-2.5 rounded-xl hover:bg-teal-700 active:scale-95 transition"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </>
+                );
+              })() : (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                  <MessageSquare className="w-12 h-12 text-slate-300 mb-2" />
+                  <p className="text-sm font-medium">請從左側點選一位同學開始聊天對談</p>
+                  <p className="text-xs text-slate-400 mt-1">選取後即可進行即時洽談或面交確認</p>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* --- PROFILE / MY ACCOUNT TAB --- */}
+        {currentTab === 'profile' && (
+          <div className="max-w-4xl mx-auto space-y-6 text-sm animate-fade-in">
+            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
+                <img 
+                  src={currentUser.avatar} 
+                  alt={currentUser.name} 
+                  className="w-16 h-16 rounded-full border border-teal-500/30 shadow object-cover"
+                />
+                <div>
+                  <h2 className="font-extrabold text-lg flex items-center gap-1 justify-center md:justify-start">
+                    {currentUser.name}
+                    {currentUser.verified && <span className="text-teal-500 text-sm">☑ 實名認證</span>}
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">{currentUser.email}</p>
+                  <div className="flex items-center gap-3 mt-2 justify-center md:justify-start">
+                    <span className="text-xs text-amber-500 font-extrabold flex items-center gap-0.5">
+                      <Star className="w-3.5 h-3.5 fill-amber-500" /> {currentUser.rating} / 5.0
+                    </span>
+                    <span className="text-slate-300 dark:text-slate-600">|</span>
+                    <span className="text-xs text-slate-500">交易誠信卓越</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={toggleVerificationStatus}
+                  className="bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border border-teal-200 dark:border-teal-900 px-4 py-2 rounded-xl font-bold text-xs transition active:scale-95"
+                >
+                  {currentUser.verified ? "關閉實名認證" : "一鍵啟用實名認證 ☑"}
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsLoggedIn(false);
+                    addToast("您已安全登出 🚪");
+                  }}
+                  className="bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1"
+                >
+                  <LogOut className="w-3.5 h-3.5" /> 登出
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Box 1: My Listed Goods */}
+              <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl p-6 shadow-sm col-span-2 space-y-4">
+                <h3 className="font-extrabold text-base flex items-center gap-1.5 border-b pb-3 border-slate-100 dark:border-slate-700">
+                  <ShoppingBag className="w-5 h-5 text-teal-600" />
+                  我上架的二手商品 (賣家管理頁)
+                </h3>
+
+                <div className="space-y-3">
+                  {products.filter(p => p.seller_id === currentUser.id).length === 0 ? (
+                    <div className="text-center p-6 text-slate-400">
+                      <p>目前您尚未在此帳號上架商品</p>
+                      <button 
+                        onClick={() => setCurrentTab('post')}
+                        className="text-teal-600 text-xs font-bold underline mt-2 inline-block"
+                      >
+                        立即前往刊登首件好物
+                      </button>
+                    </div>
+                  ) : (
+                    products.filter(p => p.seller_id === currentUser.id).map(p => (
+                      <div 
+                        key={p.id} 
+                        className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <img src={p.image} alt={p.title} className="w-12 h-12 rounded-lg object-cover" />
+                          <div>
+                            <h4 className="font-bold text-xs flex items-center gap-1">
+                              {p.title} 
+                              {p.is_new_upload && <span className="bg-teal-100 text-teal-800 text-[9px] px-1.5 py-0.5 rounded">我的新品</span>}
+                            </h4>
+                            <span className="text-rose-500 font-extrabold text-xs block">${p.price}</span>
+                            <span className="text-[10px] text-slate-400">面交地點: {p.meetup_location}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <select 
+                            value={p.status} 
+                            onChange={(e) => handleUpdateProductStatus(p.id, e.target.value)}
+                            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs px-2.5 py-1 rounded focus:outline-none"
+                          >
+                            <option value="販售中">販售中</option>
+                            <option value="已預訂">已預訂</option>
+                            <option value="面交中">面交中</option>
+                            <option value="已售出">已售出</option>
+                            <option value="已下架">已下架</option>
+                          </select>
+                          
+                          {p.status === '已售出' && (
+                            <button
+                              onClick={() => {
+                                setShowReviewModal(true);
+                              }}
+                              className="bg-amber-500 text-white px-2.5 py-1 rounded text-[10px] font-bold shrink-0"
+                            >
+                              評價買家
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Box 2: My Favorites List */}
+              <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl p-6 shadow-sm space-y-4">
+                <h3 className="font-extrabold text-base flex items-center gap-1.5 border-b pb-3 border-slate-100 dark:border-slate-700">
+                  <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />
+                  我收藏的商品 ({favorites.length})
+                </h3>
+
+                <div className="space-y-3">
+                  {favorites.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-6 text-center">暫無收藏商品</p>
+                  ) : (
+                    favorites.map(favId => {
+                      const prod = products.find(p => p.id === favId);
+                      if (!prod) return null;
+                      return (
+                        <div 
+                          key={prod.id}
+                          onClick={() => setSelectedProduct(prod)}
+                          className="p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-100/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src={prod.image} alt={prod.title} className="w-10 h-10 rounded object-cover" />
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-xs truncate max-w-[120px]">{prod.title}</h4>
+                              <span className="text-rose-500 font-extrabold text-xs block">${prod.price}</span>
+                            </div>
+                          </div>
+                          <span className="text-[9px] bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-1.5 py-0.5 rounded font-bold shrink-0">
+                            {prod.status}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* --- BOTTOM RESPONSIVE NAVIGATION BAR (Mobile sticky) --- */}
+      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 border-t border-slate-100 dark:border-slate-800 backdrop-blur shadow-lg py-2">
+        <div className="max-w-xl mx-auto flex items-center justify-around text-slate-400">
+          <button 
+            onClick={() => { setCurrentTab('home'); setSelectedProduct(null); }}
+            className={`flex flex-col items-center gap-0.5 transition ${currentTab === 'home' ? 'text-teal-600 scale-105 font-bold' : 'hover:text-slate-600'}`}
+          >
+            <ShoppingBag className="w-5 h-5" />
+            <span className="text-[10px]">探索首頁</span>
+          </button>
+
+          <button 
+            onClick={() => { setCurrentTab('post'); setSelectedProduct(null); }}
+            className={`flex flex-col items-center gap-0.5 transition ${currentTab === 'post' ? 'text-teal-600 scale-105 font-bold' : 'hover:text-slate-600'}`}
+          >
+            <Plus className="w-5 h-5 bg-teal-50 dark:bg-teal-950/40 p-0.5 rounded-lg border border-teal-200" />
+            <span className="text-[10px]">AI 刊登</span>
+          </button>
+
+          <button 
+            onClick={() => { setCurrentTab('chat'); setSelectedProduct(null); }}
+            className={`flex flex-col items-center gap-0.5 transition ${currentTab === 'chat' ? 'text-teal-600 scale-105 font-bold' : 'hover:text-slate-600'}`}
+          >
+            <div className="relative">
+              <MessageCircle className="w-5 h-5" />
+              {chats.some(c => c.unread) && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+              )}
+            </div>
+            <span className="text-[10px]">即時聊聊</span>
+          </button>
+
+          <button 
+            onClick={() => { setCurrentTab('profile'); setSelectedProduct(null); }}
+            className={`flex flex-col items-center gap-0.5 transition ${currentTab === 'profile' ? 'text-teal-600 scale-105 font-bold' : 'hover:text-slate-600'}`}
+          >
+            <User className="w-5 h-5" />
+            <span className="text-[10px]">我的頁面</span>
+          </button>
+        </div>
+      </footer>
+
+      {/* Spacing for mobile sticky navigation */}
+      <div className="h-20"></div>
+
+      {/* --- LIGHTBOX MODAL: PRODUCT DETAIL PAGE (FIXED TO AVOID BLOCKING) --- */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in text-slate-800 dark:text-white">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden max-w-3xl w-full max-h-[90vh] flex flex-col md:flex-row border dark:border-slate-700 shadow-2xl relative animate-scale-up">
+            
+            <button 
+              onClick={() => setSelectedProduct(null)}
+              className="absolute top-4 right-4 z-20 bg-slate-900/60 hover:bg-slate-900/90 text-white w-8 h-8 rounded-full flex items-center justify-center transition font-bold"
+            >
+              ×
+            </button>
+
+            <div className="w-full md:w-1/2 relative bg-slate-100 dark:bg-slate-700 aspect-video md:aspect-auto flex items-center justify-center overflow-hidden">
+              <img 
+                src={selectedProduct.image} 
+                alt={selectedProduct.title} 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-4 left-4 flex flex-col gap-1">
+                <span className="bg-teal-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow">
+                  {selectedProduct.status}
+                </span>
+                {selectedProduct.is_urgent && (
+                  <span className="bg-rose-500 text-white px-2.5 py-1 rounded-full text-[10px] font-extrabold flex items-center gap-0.5 shadow animate-pulse">
+                    <Flame className="w-3 h-3 fill-white" /> 急售
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="w-full md:w-1/2 p-6 flex flex-col justify-between overflow-y-auto max-h-[50vh] md:max-h-[90vh] space-y-4 bg-white dark:bg-slate-800">
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs text-slate-400 font-bold tracking-widest uppercase">
+                    {selectedProduct.category}
+                  </span>
+                  <button 
+                    onClick={(e) => toggleFavorite(selectedProduct.id, e)}
+                    className="text-slate-400 hover:text-rose-500 transition p-1"
+                  >
+                    <Heart className={`w-5 h-5 ${favorites.includes(selectedProduct.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                  </button>
+                </div>
+
+                <h3 className="font-extrabold text-xl mt-1 text-slate-900 dark:text-white leading-tight">
+                  {selectedProduct.title}
+                </h3>
+
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-rose-500 font-black text-2xl">${selectedProduct.price}</span>
+                  <span className="text-xs text-slate-400 px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded font-medium">
+                    {selectedProduct.bargainable ? '可接受微議價' : '不接受議價'}
+                  </span>
+                </div>
+
+                <div className="h-px bg-slate-100 dark:bg-slate-700 my-3" />
+
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">商品詳情描述</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl">
+                  {selectedProduct.description}
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                <div className="flex items-center gap-2 text-xs">
+                  <MapPin className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span className="text-slate-500 dark:text-slate-400">約定面交地點：</span>
+                  <span className="font-bold text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-full">
+                    {selectedProduct.meetup_location}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl flex items-center justify-between border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-sm">
+                      {selectedProduct.seller_name[0]}
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-xs flex items-center gap-0.5">
+                        {selectedProduct.seller_name} {selectedProduct.seller_verified && <span className="text-teal-500">☑</span>}
+                      </h5>
+                      <p className="text-[10px] text-slate-400">中央大學二手市集誠信夥伴</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-amber-500 font-extrabold text-xs block">★ {selectedProduct.seller_rating}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = window.location.href;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    addToast("商品分享網址已成功複製！ 🔗", "success");
+                  }}
+                  className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                  title="分享商品"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+                
+                {selectedProduct.seller_id === currentUser.id ? (
+                  <button 
+                    onClick={() => {
+                      setSelectedProduct(null);
+                      setCurrentTab('profile');
+                    }}
+                    className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-bold text-xs hover:brightness-110 transition"
+                  >
+                    您是此商品賣家 (前往我的管理頁面)
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleStartChat(selectedProduct)}
+                    className="flex-1 bg-gradient-to-r from-teal-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-xs shadow hover:brightness-110 active:scale-95 transition flex items-center justify-center gap-1.5"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>立即與同學私訊洽談</span>
+                  </button>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- LIGHTBOX MODAL: REVIEW AND RATING --- */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              addToast("評價已成功提交！將列入誠信數據中", "success");
+              setShowReviewModal(false);
+            }} 
+            className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full border dark:border-slate-700 shadow-2xl space-y-4 animate-scale-up text-slate-800 dark:text-white"
+          >
+            <div className="flex justify-between items-start">
+              <h3 className="font-extrabold text-sm flex items-center gap-1">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                完成交易！評估面交夥伴
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setShowReviewModal(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              雙方完成實體面交後，您可以為買家的交易誠信進行星級互評，誠信分將同步計入全校資料庫。
+            </p>
+
+            <div className="flex justify-center gap-1.5 py-2">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  type="button"
+                  key={star}
+                  onClick={() => setReviewRating(star)}
+                  className="p-1"
+                >
+                  <Star className={`w-8 h-8 ${star <= reviewRating ? 'text-amber-400 fill-amber-400 scale-105' : 'text-slate-200'} transition duration-200`} />
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-500">交易印象標籤 (可複選)</label>
+              <div className="flex flex-wrap gap-1.5">
+                {['回覆速度快', '面交準時', '商品符合描述', '非常有禮貌', '誠信買家'].map(tag => {
+                  const isSelected = reviewTags.includes(tag);
+                  return (
+                    <button
+                      type="button"
+                      key={tag}
+                      onClick={() => {
+                        if (isSelected) setReviewTags(prev => prev.filter(t => t !== tag));
+                        else setReviewTags(prev => [...prev, tag]);
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition ${
+                        isSelected 
+                          ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900' 
+                          : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">留下您的評分回饋 (選填)</label>
+              <textarea 
+                rows="3"
+                placeholder="這次的交易感覺如何？例如：面交非常爽快！"
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                className="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none"
+              ></textarea>
+            </div>
+
+            <button 
+              type="submit"
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-indigo-600 text-white font-bold text-xs shadow hover:brightness-110 transition"
+            >
+              送出誠信評價
+            </button>
+          </form>
+        </div>
+      )}
+
+    </div>
+  );
+}
